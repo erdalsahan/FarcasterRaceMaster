@@ -1,0 +1,18 @@
+{
+  "miniapp": {
+    "version": "1",
+    "name": "Airdrop Predictor",
+    "description": "Spin to Win - Kazandığında mintle!",
+    "iconUrl": "https://farcaster-race-master.vercel.app/Logo.png",
+    "homeUrl": "https://farcaster-race-master.vercel.app",
+    "canonicalDomain": "farcaster-race-master.vercel.app",
+    "requiredChains": ["eip155:8453"],
+    "tags": ["miniapp", "airdrop", "game", "mint"],
+    "requiredCapabilities": [
+      "actions.ready"
+    ]
+  },
+  "baseBuilder": {
+    "allowedAddresses": ["0xD684D39F1a486635D123d0a09C125970cFa33518"]
+  }
+}
