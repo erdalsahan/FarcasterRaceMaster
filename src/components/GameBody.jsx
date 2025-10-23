@@ -119,7 +119,7 @@ export default function GameBody() {
  return (
   <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-black text-white">
     {/* 🛣️ Oyun kutusu (BURASI relative) */}
-    <div className="relative w-[400px] h-[700px] bg-neutral-800 border-4 border-neutral-700 rounded-xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)]">
+    <div className="relative w-[250px] h-[700px] bg-neutral-800 border-4 border-neutral-700 rounded-xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)] mx-auto">
       
       {/* şeritler */}
       {[...Array(LANES - 1)].map((_, i) => (
