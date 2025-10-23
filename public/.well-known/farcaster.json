@@ -1,4 +1,9 @@
 {
+    "accountAssociation": {
+    "header": "eyJmaWQiOjEzNDIyNzksInR5cGUiOiJhdXRoIiwia2V5IjoiMHhkNDAxNzAwZjU2YzFGOWY2Q0Y1RjMwNTAwNmQ5RmE1ODM5M2E3NzZhIn0",
+    "payload": "eyJkb21haW4iOiJmYXJjYXN0ZXItcmFjZS1tYXN0ZXIudmVyY2VsLmFwcCJ9",
+    "signature": "bCcHmGgLDKVK/mUMS9v9ftK0zYA+bk87rWOxh7WzyG4UqmMZLlCVy8MlZ2NGWjTeCcKTorTyFD2shKjz8zV/yxs="
+  },
   "miniapp": {
     "version": "1",
     "name": "Airdrop Predictor",
