@@ -8,7 +8,7 @@
     "version": "1",
     "name": "Race Master",
     "description": "Be Fast, Be Careful",
-    "iconUrl": "https://farcaster-race-master.vercel.app/images/Logo.png",
+    "iconUrl": "https://farcaster-race-master.vercel.app/Logo.png",
     "homeUrl": "https://farcaster-race-master.vercel.app",
     "canonicalDomain": "farcaster-race-master.vercel.app",
     "requiredChains": ["eip155:8453"],
