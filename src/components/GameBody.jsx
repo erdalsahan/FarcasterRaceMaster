@@ -22,7 +22,7 @@ export default function GameBody() {
   const direction = useRef(null);
   const navigate = useNavigate();
 
- // 🖱️ / 📱 Dokunmatik + Fare kontrolü
+// 🖱️ / 📱 Dokunmatik + Fare kontrolü
 useEffect(() => {
   const down = (clientX) => {
     isMouseDown.current = true;
@@ -36,52 +36,71 @@ useEffect(() => {
     direction.current = null;
   };
 
-  // 🖱️ fare olayları
-  const handleMouseDown = (e) => down(e.clientX);
-  const handleMouseUp = () => up();
-
-  // 📱 dokunmatik olayları
-  const handleTouchStart = (e) => {
-    if (e.touches && e.touches.length > 0) {
-      down(e.touches[0].clientX);
-    }
-  };
-  const handleTouchEnd = () => up();
-
-  window.addEventListener("mousedown", handleMouseDown);
-  window.addEventListener("mouseup", handleMouseUp);
-  window.addEventListener("touchstart", handleTouchStart);
-  window.addEventListener("touchend", handleTouchEnd);
+  window.addEventListener("mousedown", (e) => down(e.clientX));
+  window.addEventListener("mouseup", up);
+  window.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches.length > 0) down(e.touches[0].clientX);
+  });
+  window.addEventListener("touchend", up);
 
   return () => {
-    window.removeEventListener("mousedown", handleMouseDown);
-    window.removeEventListener("mouseup", handleMouseUp);
-    window.removeEventListener("touchstart", handleTouchStart);
-    window.removeEventListener("touchend", handleTouchEnd);
+    window.removeEventListener("mousedown", (e) => down(e.clientX));
+    window.removeEventListener("mouseup", up);
+    window.removeEventListener("touchstart", (e) => {
+      if (e.touches && e.touches.length > 0) down(e.touches[0].clientX);
+    });
+    window.removeEventListener("touchend", up);
   };
 }, []);
 
 
-  // 🚗 Hareket (tam kenara kadar)
-  useEffect(() => {
-    let raf;
-    const move = () => {
-      if (isMouseDown.current && containerRef.current) {
-        const w = containerRef.current.clientWidth;
-        const minX = 0;
-        const maxX = w - CAR_W;
-        setPlayerX((x) => {
-          const step = 5;
-          if (direction.current === "left") return Math.max(minX, x - step);
-          if (direction.current === "right") return Math.min(maxX, x + step);
-          return x;
-        });
+// 🚗 Hareket (altın ayarlı versiyon)
+useEffect(() => {
+  let raf;
+  let velocity = 0;
+  const acceleration = 0.25; // hızlanma oranı
+  const deceleration = 0.18; // yavaşlama oranı
+  const baseStep = 1.4; // hız çarpanı
+  const maxSpeed = 4.8; // tavan hız
+  const deadZone = 0.05; // titreme önleyici
+
+  const move = () => {
+    if (isMouseDown.current && containerRef.current) {
+      if (direction.current === "left") {
+        velocity = Math.max(velocity - acceleration, -maxSpeed);
+      } else if (direction.current === "right") {
+        velocity = Math.min(velocity + acceleration, maxSpeed);
       }
-      raf = requestAnimationFrame(move);
-    };
+    } else {
+      // yavaşça dur
+      if (velocity > 0) velocity = Math.max(0, velocity - deceleration);
+      else if (velocity < 0) velocity = Math.min(0, velocity + deceleration);
+    }
+
+    // titremeyi yok et: çok küçük hızlarda sabitle
+    if (Math.abs(velocity) < deadZone) velocity = 0;
+
+    setPlayerX((x) => {
+      const w = containerRef.current?.clientWidth || 260;
+      const minX = 0;
+      const maxX = w - CAR_W;
+      const newX = x + velocity * baseStep;
+
+      // dış sınıra yumuşak fren
+      if (newX < minX) return minX;
+      if (newX > maxX) return maxX;
+      return newX;
+    });
+
     raf = requestAnimationFrame(move);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+  };
+
+  raf = requestAnimationFrame(move);
+  return () => cancelAnimationFrame(raf);
+}, []);
+
+
+
 
   // 🔹 Düşman oluşturma
   useEffect(() => {
