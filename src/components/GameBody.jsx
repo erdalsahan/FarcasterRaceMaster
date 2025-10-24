@@ -114,7 +114,7 @@ useEffect(() => {
         if (passed) {
           setScore((s) => s + passed * level);
           passedRef.current += passed;
-          if (passedRef.current >= 20) {
+          if (passedRef.current >= 10) {
             passedRef.current = 0;
             setLevel((l) => l + 1);
             setSpeed((s) => s * 1.1);
