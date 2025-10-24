@@ -8,8 +8,8 @@ export default function GameOver() {
   const score = location.state?.score ?? 0;
 
   const handleCast = async () => {
-    const text = `💥 Airdrop Hunter'da ${score} puan yaptım! 🚀\nBenim skorumu geçebilir misin? 🎯`;
-    const appUrl = "https://farcaster.xyz/miniapps/QBCgeq4Db7Wx/airdrop-hunter";
+    const text = `🏎️💨 Race Master'da ${score} puan yaptım! 🏁🔥\nSenin hızın buna yeter mi? ⚡🚗`;
+    const appUrl = "https://farcaster.xyz/miniapps/_TqCvCpPc4Sg/race-master";
 
     try {
       const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(
