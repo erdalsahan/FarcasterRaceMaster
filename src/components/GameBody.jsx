@@ -206,9 +206,12 @@ export default function GameBody() {
           />
         ))}
 
-        <div className="absolute top-3 left-3 bg-black/50 px-3 py-1 rounded text-sm font-semibold text-white">
-          🏁 Skor: {score} | 🔥 Seviye: {level}
-        </div>
+        {/* 🏁 Skor / Seviye */}
+<div className="absolute top-3 left-3 px-3 py-1 rounded text-sm font-semibold bg-black/50 backdrop-blur-sm text-[#FFD700]">
+  🏁 <span className="font-semibold text-[#FFD700]">Skor:</span> <span className="font-semibold text-[#FFD700]">{score}</span>
+  {" "} | 🔥 <span className="font-semibold text-[#FFD700]">Seviye:</span> <span className="font-semibold text-[#FFD700]">{level}</span>
+</div>
+
       </div>
     </div>
   );
