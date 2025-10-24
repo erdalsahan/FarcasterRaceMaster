@@ -22,25 +22,45 @@ export default function GameBody() {
   const direction = useRef(null);
   const navigate = useNavigate();
 
-  // 🖱️ Mouse kontrol
-  useEffect(() => {
-    const down = (e) => {
-      isMouseDown.current = true;
-      const rect = containerRef.current.getBoundingClientRect();
-      const midX = rect.left + rect.width / 2;
-      direction.current = e.clientX < midX ? "left" : "right";
-    };
-    const up = () => {
-      isMouseDown.current = false;
-      direction.current = null;
-    };
-    window.addEventListener("mousedown", down);
-    window.addEventListener("mouseup", up);
-    return () => {
-      window.removeEventListener("mousedown", down);
-      window.removeEventListener("mouseup", up);
-    };
-  }, []);
+ // 🖱️ / 📱 Dokunmatik + Fare kontrolü
+useEffect(() => {
+  const down = (clientX) => {
+    isMouseDown.current = true;
+    const rect = containerRef.current.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    direction.current = clientX < midX ? "left" : "right";
+  };
+
+  const up = () => {
+    isMouseDown.current = false;
+    direction.current = null;
+  };
+
+  // 🖱️ fare olayları
+  const handleMouseDown = (e) => down(e.clientX);
+  const handleMouseUp = () => up();
+
+  // 📱 dokunmatik olayları
+  const handleTouchStart = (e) => {
+    if (e.touches && e.touches.length > 0) {
+      down(e.touches[0].clientX);
+    }
+  };
+  const handleTouchEnd = () => up();
+
+  window.addEventListener("mousedown", handleMouseDown);
+  window.addEventListener("mouseup", handleMouseUp);
+  window.addEventListener("touchstart", handleTouchStart);
+  window.addEventListener("touchend", handleTouchEnd);
+
+  return () => {
+    window.removeEventListener("mousedown", handleMouseDown);
+    window.removeEventListener("mouseup", handleMouseUp);
+    window.removeEventListener("touchstart", handleTouchStart);
+    window.removeEventListener("touchend", handleTouchEnd);
+  };
+}, []);
+
 
   // 🚗 Hareket (tam kenara kadar)
   useEffect(() => {
