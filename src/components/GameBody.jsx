@@ -90,7 +90,7 @@ useEffect(() => {
         const list = [...prev];
         if (list.length < 5) {
           const lane = Math.floor(Math.random() * LANES);
-          const laneW = 260 / LANES;
+          const laneW = 280 / LANES;
           const x = laneW * lane + laneW / 2 - CAR_W / 2;
           list.push({ id: crypto.randomUUID(), x, y: -CAR_H - 60 });
         }
