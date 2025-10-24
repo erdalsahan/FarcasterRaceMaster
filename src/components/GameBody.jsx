@@ -2,203 +2,214 @@ import React, { useEffect, useRef, useState } from "react";
 import RedCar from "../assets/images/RedCar.png";
 import BlueCar from "../assets/images/BlueCar.png";
 import { useNavigate } from "react-router-dom";
+import CrashSound from "../assets/sounds/crash.mp3";
 const LANES = 4;
 const CAR_W = 60;
 const CAR_H = 70;
 const ROAD_H = 700;
 
 export default function GameBody() {
-  const [playerLane, setPlayerLane] = useState(1);
+  const [playerX, setPlayerX] = useState(0);
   const [enemies, setEnemies] = useState([]);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [speed, setSpeed] = useState(3);
+  const [crashed, setCrashed] = useState(false);
+  const [blast, setBlast] = useState(null);
   const passedRef = useRef(0);
+  const containerRef = useRef(null);
+  const isMouseDown = useRef(false);
+  const direction = useRef(null);
   const navigate = useNavigate();
-  // 🔹 Klavye kontrolü
+
+  // 🖱️ Mouse kontrol
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "ArrowLeft") setPlayerLane((l) => Math.max(0, l - 1));
-      if (e.key === "ArrowRight") setPlayerLane((l) => Math.min(LANES - 1, l + 1));
+    const down = (e) => {
+      isMouseDown.current = true;
+      const rect = containerRef.current.getBoundingClientRect();
+      const midX = rect.left + rect.width / 2;
+      direction.current = e.clientX < midX ? "left" : "right";
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const up = () => {
+      isMouseDown.current = false;
+      direction.current = null;
+    };
+    window.addEventListener("mousedown", down);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousedown", down);
+      window.removeEventListener("mouseup", up);
+    };
   }, []);
 
-  // 🔹 Düşman üretimi
+  // 🚗 Hareket (tam kenara kadar)
+  useEffect(() => {
+    let raf;
+    const move = () => {
+      if (isMouseDown.current && containerRef.current) {
+        const w = containerRef.current.clientWidth;
+        const minX = 0;
+        const maxX = w - CAR_W;
+        setPlayerX((x) => {
+          const step = 5;
+          if (direction.current === "left") return Math.max(minX, x - step);
+          if (direction.current === "right") return Math.min(maxX, x + step);
+          return x;
+        });
+      }
+      raf = requestAnimationFrame(move);
+    };
+    raf = requestAnimationFrame(move);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // 🔹 Düşman oluşturma
   useEffect(() => {
     const spawn = setInterval(() => {
       setEnemies((prev) => {
-        const newEnemies = [...prev];
-        const activeLanes = new Set(prev.filter((e) => e.y < 200).map((e) => e.lane));
-
-        if (activeLanes.size < 3) {
-          let lane;
-          do {
-            lane = Math.floor(Math.random() * LANES);
-          } while (activeLanes.has(lane) && activeLanes.size >= 3);
-
-          newEnemies.push({
-            id: crypto.randomUUID(),
-            lane,
-            y: -CAR_H - 60,
-          });
+        const list = [...prev];
+        if (list.length < 5) {
+          const lane = Math.floor(Math.random() * LANES);
+          const laneW = 260 / LANES;
+          const x = laneW * lane + laneW / 2 - CAR_W / 2;
+          list.push({ id: crypto.randomUUID(), x, y: -CAR_H - 60 });
         }
-
-        return newEnemies;
+        return list;
       });
     }, Math.max(700, 1300 - level * 100));
-
     return () => clearInterval(spawn);
   }, [level]);
 
-  // 🔹 Hareket ve skor
+  // 🔹 Düşman hareketi ve skor
   useEffect(() => {
-    const move = setInterval(() => {
+    const t = setInterval(() => {
       setEnemies((prev) => {
         const moved = [];
         let passed = 0;
-
         for (const e of prev) {
-          const newY = e.y + speed;
-          if (newY >= ROAD_H) {
-            passed += 1; // Araç ekranı geçti
-          } else {
-            moved.push({ ...e, y: newY });
-          }
+          const y = e.y + speed;
+          if (y >= ROAD_H) passed++;
+          else moved.push({ ...e, y });
         }
-
-        if (passed > 0) {
-          // ✅ skor her geçen araçta artar
+        if (passed) {
           setScore((s) => s + passed * level);
           passedRef.current += passed;
-
-          // ✅ 20 araçta seviye artar
           if (passedRef.current >= 20) {
             passedRef.current = 0;
             setLevel((l) => l + 1);
-            setSpeed((s) => s * 1.1); // hız %10 artar
+            setSpeed((s) => s * 1.1);
           }
         }
-
         return moved;
       });
     }, 50);
-
-    return () => clearInterval(move);
+    return () => clearInterval(t);
   }, [speed, level]);
 
-  // 🔹 Çarpışma kontrolü
-  useEffect(() => {
-    const playerY = ROAD_H - CAR_H - 20;
-    const playerTop = playerY;
-    const playerBottom = playerY + CAR_H;
+  // 💥 Çarpışma + animasyon
+ useEffect(() => {
+  if (crashed) return;
 
-    enemies.forEach((enemy) => {
-      const enemyTop = enemy.y;
-      const enemyBottom = enemy.y + CAR_H;
-      const sameLane = enemy.lane === playerLane;
+  const playerY = ROAD_H - CAR_H - 20;
+  const pL = playerX + 8,
+        pR = playerX + CAR_W - 8,
+        pT = playerY + 10,
+        pB = playerY + CAR_H - 5;
 
-      if (sameLane && enemyBottom > playerTop && enemyTop < playerBottom) {
-        // 🟥 Artık alert yok → direkt GameOver sayfasına yönlendiriyoruz
+  enemies.forEach((e) => {
+    const eL = e.x + 8,
+          eR = e.x + CAR_W - 8,
+          eT = e.y + 10,
+          eB = e.y + CAR_H - 5;
+    const hDist = Math.abs((pL + pR) / 2 - (eL + eR) / 2);
+    const overlapY = pT < eB && pB > eT;
+
+    if (hDist < CAR_W - 25 && overlapY) {
+      // ✅ çarpışma tespit edildi
+      setCrashed(true);
+      setBlast({ x: playerX + CAR_W / 2, y: playerY + CAR_H / 2 });
+
+      // 🔊 ses çal
+      const crashAudio = new Audio(CrashSound);
+      crashAudio.volume = 0.8;
+      crashAudio.currentTime = 0;
+      crashAudio.play().catch((err) => console.warn("Ses engellendi:", err));
+
+      // ⏱ animasyon + ses senkronu
+      setTimeout(() => {
         navigate("/gameover", { state: { score } });
-
-        // Temizle
         setEnemies([]);
         setScore(0);
         setLevel(1);
         setSpeed(3);
         passedRef.current = 0;
-      }
-    });
-  }, [enemies, playerLane, score, navigate]);
+        setCrashed(false);
+        setBlast(null);
+      }, 1400);
+    }
+  });
+}, [enemies, playerX, score, navigate, crashed]);
 
-  const laneX = (lane) =>
-    `calc(${(lane * 100) / LANES}% + ${(100 / LANES) / 2}% - ${CAR_W / 2}px)`;
 
- return (
-  <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-black text-white">
-    {/* 🛣️ Oyun kutusu (BURASI relative) */}
-    <div className="relative w-[260px] h-[700px] bg-neutral-800 border-4 border-neutral-700 rounded-xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)] mx-auto">
-      
-      {/* şeritler */}
-      {[...Array(LANES - 1)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute top-0 h-full border-l border-dashed border-white/30"
-          style={{ left: `${((i + 1) * 100) / LANES}%` }}
-        />
-      ))}
+  return (
+    <div className="w-full h-screen flex items-center justify-center bg-[#E4C59E] text-white">
+      <div
+        ref={containerRef}
+        className="relative w-[260px] h-[700px] bg-[#2F2F2F] border-4 border-[#3A3A3A] rounded-xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)] mx-auto select-none"
+      >
+        {[...Array(LANES - 1)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute top-0 h-full"
+            style={{
+              left: `${((i + 1) * 100) / LANES}%`,
+              borderLeft: "3px dashed white",
+              height: "100%",
+            }}
+          />
+        ))}
 
-      {/* oyuncu */}
-      <img
-        src={RedCar}
-        alt="player"
-        className="absolute z-20 select-none"
-        style={{
-          width: `${CAR_W}px`,
-          height: `${CAR_H}px`,
-          imageRendering: "pixelated",
-          bottom: "20px",
-          left: laneX(playerLane),
-        }}
-      />
-
-      {/* düşmanlar */}
-      {enemies.map((e) => (
         <img
-          key={e.id}
-          src={BlueCar}
-          alt="enemy"
-          className="absolute z-10 select-none"
+          src={RedCar}
+          alt="player"
+          className={`absolute z-20 ${crashed ? "animate-crash" : "transition-all duration-75 ease-linear"}`}
           style={{
-            width: `${CAR_W}px`,
-            height: `${CAR_H}px`,
-            imageRendering: "pixelated",
-            top: `${e.y}px`,
-            left: laneX(e.lane),
+            width: CAR_W,
+            height: CAR_H,
+            bottom: 20,
+            left: playerX,
           }}
         />
-      ))}
 
-      {/* skor / seviye */}
-      <div className="absolute top-3 left-3 bg-black/50 px-3 py-1 rounded text-sm font-semibold">
-        🏁 Skor: <span className="text-green-400">{score}</span> | 🔥 Seviye:{" "}
-        <span className="text-orange-400">{level}</span>
-      </div>
+        {blast && (
+          <div
+            className="absolute z-30 animate-boom pointer-events-none"
+            style={{
+              width: 10,
+              height: 10,
+              left: blast.x - 5,
+              top: blast.y - 5,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(255,210,120,1) 0%, rgba(255,120,0,0.8) 40%, rgba(255,0,0,0.6) 60%, rgba(0,0,0,0) 70%)",
+            }}
+          />
+        )}
 
-      {/* 🕹️ JOYSTICK — ***OYUN KUTUSUNUN İÇİNDE*** ve ***EN ALT ORTADA*** */}
-      <div
-        data-testid="joystick"
-        className="pointer-events-auto z-30"
-        style={{
-          position: "absolute",
-          bottom: 8,            // ← alt çizgiye yakın
-          left: "50%",
-          transform: "translateX(-50%)",
-        }}
-      >
-        <div className="relative flex flex-col items-center justify-center">
-          <div className="absolute w-36 h-36 rounded-full bg-blue-500/20 blur-3xl" />
-          <button className="mb-2 w-12 h-12 rounded-full bg-blue-500 text-white text-lg shadow-[0_0_12px_rgba(59,130,246,0.8)] hover:bg-blue-400 active:translate-y-1 transition">⬆️</button>
-          <div className="flex items-center justify-center gap-5">
-            <button
-              onClick={() => setPlayerLane((l) => Math.max(0, l - 1))}
-              className="w-12 h-12 rounded-full bg-blue-500 text-white text-lg shadow-[0_0_12px_rgba(59,130,246,0.8)] hover:bg-blue-400 active:-translate-x-1 transition"
-            >⬅️</button>
-            <div className="w-8 h-8 rounded-full bg-blue-400/30 border border-blue-300 shadow-[inset_0_0_10px_rgba(59,130,246,0.8)]" />
-            <button
-              onClick={() => setPlayerLane((l) => Math.min(LANES - 1, l + 1))}
-              className="w-12 h-12 rounded-full bg-blue-500 text-white text-lg shadow-[0_0_12px_rgba(59,130,246,0.8)] hover:bg-blue-400 active:translate-x-1 transition"
-            >➡️</button>
-          </div>
-          <button className="mt-2 w-12 h-12 rounded-full bg-blue-500 text-white text-lg shadow-[0_0_12px_rgba(59,130,246,0.8)] hover:bg-blue-400 active:-translate-y-1 transition">⬇️</button>
+        {enemies.map((e) => (
+          <img
+            key={e.id}
+            src={BlueCar}
+            alt="enemy"
+            className="absolute z-10"
+            style={{ width: CAR_W, height: CAR_H, top: e.y, left: e.x }}
+          />
+        ))}
+
+        <div className="absolute top-3 left-3 bg-black/50 px-3 py-1 rounded text-sm font-semibold text-white">
+          🏁 Skor: {score} | 🔥 Seviye: {level}
         </div>
       </div>
-      {/* 🔚 JOYSTICK — bu yorumdan SONRA oyun kutusu kapanıyor */}
     </div>
-  </div>
-);
-
-
+  );
 }
