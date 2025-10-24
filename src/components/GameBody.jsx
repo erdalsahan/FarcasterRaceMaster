@@ -175,7 +175,7 @@ useEffect(() => {
     <div className="w-full h-screen flex items-center justify-center bg-[#E4C59E] text-white">
       <div
         ref={containerRef}
-        className="relative w-[260px] h-[700px] bg-[#2F2F2F] border-4 border-[#3A3A3A] rounded-xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)] mx-auto select-none"
+        className="relative w-[280px] h-[700px] bg-[#2F2F2F] border-4 border-[#3A3A3A] rounded-xl overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)] mx-auto select-none"
       >
         {[...Array(LANES - 1)].map((_, i) => (
           <div
