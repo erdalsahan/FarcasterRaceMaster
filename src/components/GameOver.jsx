@@ -4,7 +4,7 @@ import { sdk } from "@farcaster/miniapp-sdk";
 import { useAccount, useWriteContract } from "wagmi";
 import { parseEther } from "viem";
 import { CONTRACT_ADDRESS, ABI } from "./ScoreMint";
-
+import { ethers } from "ethers";
 export default function GameOver() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -13,30 +13,61 @@ export default function GameOver() {
   const { address, isConnected } = useAccount();
   const { writeContractAsync, isPending } = useWriteContract();
 
-  const handleMint = async () => {
-    try {
-      if (!isConnected) {
-        alert("⚠️ Cüzdan bağlı değil!");
-        return;
-      }
+ const handleMint = async () => {
+  try {
+    console.log("🪙 Mint işlemi başlatılıyor...");
 
-      console.log("🪙 Mint işlemi başlatılıyor...");
+    // 🔍 Önce Farcaster Wallet var mı kontrol et
+    let provider;
 
-      const tx = await writeContractAsync({
-        address: CONTRACT_ADDRESS,
-        abi: ABI,
-        functionName: "mintScore",
-        args: [score],
-        value: parseEther("0.00002"), // kontratta belirttiğin ücret
-      });
-
-      console.log("✅ Mint başarılı, tx:", tx);
-      alert(`Mint başarılı! 🎉\nTx Hash: ${tx}`);
-    } catch (err) {
-      console.error("Mint hatası:", err);
-      alert("Mint işlemi başarısız 😅");
+    if (window.ethereum?.providers?.length) {
+      // birden fazla provider varsa (örneğin Farcaster + MetaMask)
+      provider =
+        window.ethereum.providers.find((p) => p.isFarcaster) || // ✅ Öncelik Farcaster
+        window.ethereum.providers.find((p) => p.isMetaMask) || // sonra MetaMask
+        window.ethereum.providers[0];
+    } else {
+      provider = window.ethereum;
     }
-  };
+
+    if (!provider) {
+      alert("⚠️ Cüzdan bulunamadı!");
+      return;
+    }
+
+    // 💡 Bilgi amaçlı log
+    console.log(
+      "🔗 Aktif Wallet:",
+      provider.isFarcaster
+        ? "Farcaster Wallet"
+        : provider.isMetaMask
+        ? "MetaMask"
+        : "Bilinmiyor"
+    );
+
+    // 🔌 Provider'ı ethers ile bağla
+    const ethersProvider = new ethers.BrowserProvider(provider);
+    const signer = await ethersProvider.getSigner();
+
+    // ⛓️ Kontratı bağla
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    // 💸 Mint işlemini gönder
+    const tx = await contract.mintScore(score, {
+      value: ethers.parseEther("0.00002"),
+    });
+
+    console.log("✅ Mint gönderildi:", tx.hash);
+
+    alert(
+      `🎉 Mint başarılı!\nTx Hash:\n${tx.hash}\n\n👇 Basescan'de görmek için tıkla`
+    );
+    window.open(`https://basescan.org/tx/${tx.hash}`, "_blank");
+  } catch (err) {
+    console.error("Mint hatası:", err);
+    alert("Mint işlemi başarısız 😅");
+  }
+};
 
   const handleCast = async () => {
     const text = `🏎️💨 Race Master'da ${score} puan yaptım! 🏁🔥\nSenin hızın buna yeter mi? ⚡🚗`;
